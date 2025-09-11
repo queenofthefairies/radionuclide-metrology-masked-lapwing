@@ -6,6 +6,7 @@ Created on Wed Oct 11 14:55:29 2017
 """
 from __main__ import *
 
+# SPECIFIED BACKGROUND WITH ACCIDENTAL COINCIDENCES CORRECTION
 
 #==============================================================================
 # Data extraction functions
@@ -27,7 +28,7 @@ def stdev_mean_theor_calc(weight):
 
 
 
-def threshold(df,backdf,i_index):
+def threshold(df,backdf,i_index, rt):
     thresh_backdf=backdf.iloc[[i_index]]
     df['backLDr8']=thresh_backdf['backLDr8'].sum()
     df['backXr8']=thresh_backdf['backXr8'].sum()
@@ -43,6 +44,70 @@ def threshold(df,backdf,i_index):
     df['Decay Factor']=(np.log(2)*df[' Real']/halflifeseconds/
              (1-np.exp(-np.log(2)*df[' Real']/halflifeseconds))*
              0.5**(df['timedif(s)']/halflifeseconds))
+
+    # All the bits of the Venn diagram for calculating accidental coincidences
+    # assuming 3 channels
+    df['p3A'] = (df[' A']-df[' AB']-df[' AC']+df[' ABC'])/df[' Live']
+    df['p3B'] = (df[' B']-df[' AB']-df[' BC']+df[' ABC'])/df[' Live']
+    df['p3C'] = (df[' C']-df[' BC']-df[' AC']+df[' ABC'])/df[' Live']
+    
+    df['p3S'] = df['p3A']+df['p3B']+df['p3C']
+
+    df['p3AB'] = (df[' AB']-df[' ABC'])/df[' Live']
+    df['p3AC'] = (df[' AC']-df[' ABC'])/df[' Live']
+    df['p3BC'] = (df[' BC']-df[' ABC'])/df[' Live']
+
+    df['p3D'] = df['p3AB'] +df['p3AC'] +df['p3BC']
+
+    df['p3T'] = df[' ABC']/df[' Live']
+
+
+    # assuming 4 channels
+    df['p4A'] = (df[' A']-df[' AB']-df[' AC']-df[' AX']
+                +df[' ABX']+df[' ACX']+df[' ABC']-df[' ABCX'])/df[' Live']
+    df['p4B'] = (df[' B']-df[' AB']-df[' BC']-df[' BX']
+                +df[' ABX']+df[' BCX']+df[' ABC']-df[' ABCX'])/df[' Live']
+    df['p4C'] = (df[' C']-df[' BC']-df[' AC']-df[' CX']
+                +df[' BCX']+df[' ACX']+df[' ABC']-df[' ABCX'])/df[' Live']
+    df['p4X'] = (df[' X']-df[' AX']-df[' BX']-df[' CX']
+                +df[' ABX']+df[' ACX']+df[' BCX']-df[' ABCX'])/df[' Live']
+    
+    df['p4S'] = df['p4A']+df['p4B']+df['p4C']+df['p4X']
+
+    df['p4AB'] = (df[' AB']-df[' ABX']-df[' ABC']+df[' ABCX'])/df[' Live']
+    df['p4AC'] = (df[' AC']-df[' ACX']-df[' ABC']+df[' ABCX'])/df[' Live']
+    df['p4BC'] = (df[' BC']-df[' BCX']-df[' ABC']+df[' ABCX'])/df[' Live']
+
+    df['p4AX'] = (df[' AX']-df[' ABX']-df[' ACX']+df[' ABCX'])/df[' Live']
+    df['p4BX'] = (df[' BX']-df[' ABX']-df[' BCX']+df[' ABCX'])/df[' Live']
+    df['p4CX'] = (df[' CX']-df[' ACX']-df[' BCX']+df[' ABCX'])/df[' Live']
+
+    df['p4D'] = df['p4AB'] +df['p4AC'] +df['p4BC'] +df['p4AX'] +df['p4BX'] +df['p4CX'] 
+
+    df['p4ABX'] = (df[' ABX']-df[' ABCX'])/df[' Live']
+    df['p4ACX'] = (df[' ACX']-df[' ABCX'])/df[' Live']
+    df['p4BCX'] = (df[' BCX']-df[' ABCX'])/df[' Live']
+
+    df['p4ABC'] = (df[' ABC']-df[' ABCX'])/df[' Live']
+
+    df['p4ABCX'] = df[' ABCX']/df[' Live']
+
+    # Accidental coincidences calculation for LDX types
+    df['aLDX Type1'] = 2*rt*((df['p4X']+df['p4AX']+df['p4BX']+df['p4CX'])*(df['p4ABC']+df['p4AB']+df['p4AC']+df['p4BC'])
+                            +df['p4A']*(df['p4BX']+df['p4CX']) +df['p4B']*(df['p4AX']+df['p4CX']) +df['p4C']*(df['p4AX']+df['p4BX'])
+                            +df['p4AX']*df['p4BX'] +df['p4AX']*df['p4CX'] +df['p4BX']*df['p4CX'])
+
+    df['aLDX Type2'] = rt*(df['p4ABCX']*(df['p4S']+df['p4D']+df['p4ABC'])
+                           +df['p4ABX']*(df['p4S']-df['p4C']+df['p4AB']+df['p4AX']+df['p4BX'])
+                           +df['p4ACX']*(df['p4S']-df['p4B']+df['p4AC']+df['p4AX']+df['p4CX'])
+                           +df['p4BCX']*(df['p4S']-df['p4A']+df['p4BC']+df['p4BX']+df['p4CX']))
+    
+    df['aLDX'] = df['aLDX Type1'] + df['aLDX Type2']
+
+    
+
+
+
     # LD Rate, decay and background corrected
     df['LDr8']=(df[' LD']/df[' Live']-df['backLDr8'])*df['Decay Factor']
     # X Rate, decay and background corrected
@@ -238,7 +303,7 @@ threshcolumns= [
 'timedif(s)','Decay Factor', 'backLDr8','LDr8','backXr8', 'Xr8','backLDXr8', 'LDXr8', 
 'uncBG/C', 'uncB', 'uncG/C-1', 'unc1-C/G']
 
-threshdf=pd.DataFrame(data=[], columns=(threshcolumns))
+#threshdf=pd.DataFrame(data=[], columns=(threshcolumns))
 
 
 regcolumns=['G/C-1 WM', 'Stdev of Mean G/C-1 (Theor)', 'Stdev of Mean G/C-1 (Obs)',
@@ -246,7 +311,7 @@ regcolumns=['G/C-1 WM', 'Stdev of Mean G/C-1 (Theor)', 'Stdev of Mean G/C-1 (Obs
 '1-C/G WM', 'Stdev of Mean 1-C/G (Theor)', 'Stdev of Mean 1-C/G (Obs)', 
 'B WM', 'Stdev of Mean B (Theor)', 'Stdev of Mean B (Obs)', 'Stdev of Mean B (Obs)(ODR only)']
 
-regdf=pd.DataFrame(data=[],columns=(regcolumns))
+#regdf=pd.DataFrame(data=[],columns=(regcolumns))
 
 #==============================================================================
 # ANALYSIS
@@ -254,16 +319,20 @@ regdf=pd.DataFrame(data=[],columns=(regcolumns))
 
 dirname=rtdt1dir
 i=0
-while i < len(threshfiles1):
+for i in range(len(threshfiles1)):
     if threshfiles1[i]:
         thresh1df, unc_params = dataget(dirname,threshfiles1[i],backgroundexcel,i)
         stats1=statsget(unc_params)
         reg1df=pd.DataFrame(data=stats1,index=[i],columns=regcolumns)
-        threshdf=threshdf.append(thresh1df)
-        regdf=regdf.append(reg1df)
-        thresh1df.drop(thresh1df.index, inplace=True)
-        reg1df.drop(reg1df.index, inplace=True)
-    i=i+1
+        if i == 0:
+            # initialise previously empty dataframes
+            threshdf=thresh1df
+            regdf=reg1df
+        else:
+            # add to dataframes
+            threshdf=pd.concat([threshdf,thresh1df])
+            regdf=pd.concat([regdf,reg1df])
+
 
 regdf=regdf[regcolumns]
 regdf=regdf.sort_values('G/C-1 WM')

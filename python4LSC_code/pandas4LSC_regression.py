@@ -148,7 +148,8 @@ infodf=pd.DataFrame(data=infodat,columns=(fitsummarycols))
 linregBGC_LS=fit(xdataBGC,ydataBGC,yuncBGC,branchratio)
 BGC_LS=pd.DataFrame(data=[('Linear','BG/C vs G/C-1','Least Squares')],columns=['Function','Regression data','Regression method'])
 linregBGC_LS=pd.concat([linregBGC_LS,BGC_LS],axis=1)
-fitparamsdf=fitparamsdf.append(linregBGC_LS)
+#fitparamsdf=fitparamsdf.append(linregBGC_LS)
+
 
 # LINEAR regression. Data = BG/C vs G/C-1 Method = ODR
 # Least squares becomes initial estimate for ODR
@@ -156,13 +157,13 @@ beta_lin=[np.array(linregBGC_LS)[0,3],np.array(linregBGC_LS)[0,5]]
 linregBGC_ODR=fitODR(xdataBGC, ydataBGC, xuncBGC, yuncBGC,branchratio)
 linBGC_ODR=pd.DataFrame(data=[('Linear','BG/C vs G/C-1','Orthogonal Distance')],columns=['Function','Regression data','Regression method'])
 linregBGC_ODR=pd.concat([linregBGC_ODR,linBGC_ODR],axis=1)
-fitparamsdf=fitparamsdf.append(linregBGC_ODR)
+#fitparamsdf=fitparamsdf.append(linregBGC_ODR)
 
 # LINEAR regression. Data = B vs 1-C/G Method = Least Squares
 linregB_LS=fit(xdataB,ydataB,yuncB,branchratio)
 linB_LS=pd.DataFrame(data=[('Linear','B vs 1-C/G','Least Squares')],columns=['Function','Regression data','Regression method'])
 linregB_LS=pd.concat([linregB_LS,linB_LS],axis=1)
-fitparamsdf=fitparamsdf.append(linregB_LS)
+#fitparamsdf=fitparamsdf.append(linregB_LS)
 
 #LINEAR regression. Data = B vs 1-C/G Method = ODR
 # Least squares becomes initial estimate for ODR
@@ -170,13 +171,16 @@ beta_lin=[np.array(linregB_LS)[0,3],np.array(linregB_LS)[0,5]]
 linregB_ODR=fitODR(xdataB, ydataB, xuncB, yuncB, branchratio)
 linB_ODR=pd.DataFrame(data=[('Linear','B vs 1-C/G','Orthogonal Distance')],columns=['Function','Regression data','Regression method'])
 linregB_ODR=pd.concat([linregB_ODR,linB_ODR],axis=1)
-fitparamsdf=fitparamsdf.append(linregB_ODR)
+#fitparamsdf=fitparamsdf.append(linregB_ODR)
+
+# Bring all LINEAR regression results into one data frame
+fitparamsdf = pd.concat([linregBGC_LS,linregBGC_ODR,linregB_LS,linregB_ODR])
 
 # CUBIC regression. Data = BG/C vs G/C-1 Method = Least Squares
 cubregBGC_LS=fit3(xdataBGC,ydataBGC,yuncBGC,branchratio)
 cubBGC_LS=pd.DataFrame(data=[('Cubic','BG/C vs G/C-1','Least Squares')],columns=['Function','Regression data','Regression method'])
 cubregBGC_LS=pd.concat([cubregBGC_LS,cubBGC_LS],axis=1)
-fit3paramsdf=fit3paramsdf.append(cubregBGC_LS)
+#fit3paramsdf=fit3paramsdf.append(cubregBGC_LS)
 
 # CUBIC regression. Data = BG/C vs G/C-1 Method = ODR
 # Least squares becomes initial estimate for ODR
@@ -184,13 +188,13 @@ beta_cub=[np.array(cubregBGC_LS)[0,3],np.array(cubregBGC_LS)[0,5],np.array(cubre
 cubregBGC_ODR=fit3ODR(xdataBGC, ydataBGC, xuncBGC, yuncBGC, branchratio)
 cubBGC_ODR=pd.DataFrame(data=[('Cubic','BG/C vs G/C-1','Orthogonal Distance')],columns=['Function','Regression data','Regression method'])
 cubregBGC_ODR=pd.concat([cubregBGC_ODR,cubBGC_ODR],axis=1)
-fit3paramsdf=fit3paramsdf.append(cubregBGC_ODR)
+#fit3paramsdf=fit3paramsdf.append(cubregBGC_ODR)
 
 # CUBIC regression. Data = B vs 1-C/G Method = Least Squares
 cubregB_LS=fit3(xdataB,ydataB,yuncB,branchratio)
 cubB_LS=pd.DataFrame(data=[('Cubic','B vs 1-C/G','Least Squares')],columns=['Function','Regression data','Regression method'])
 cubregB_LS=pd.concat([cubregB_LS,cubB_LS],axis=1)
-fit3paramsdf=fit3paramsdf.append(cubregB_LS)
+#fit3paramsdf=fit3paramsdf.append(cubregB_LS)
 
 # CUBIC regression. Data = B vs 1-C/G Method = ODR
 # Least squares becomes initial estimate for ODR
@@ -198,7 +202,10 @@ beta_cub=[np.array(cubregB_LS)[0,3],np.array(cubregB_LS)[0,5],np.array(cubregB_L
 cubregB_ODR=fit3ODR(xdataB, ydataB, xuncB, yuncB, branchratio)
 cubB_ODR=pd.DataFrame(data=[('Cubic','B vs 1-C/G','Orthogonal Distance')],columns=['Function','Regression data','Regression method'])
 cubregB_ODR=pd.concat([cubregB_ODR,cubB_ODR],axis=1)
-fit3paramsdf=fit3paramsdf.append(cubregB_ODR)
+#fit3paramsdf=fit3paramsdf.append(cubregB_ODR)
+
+# Bring all CUBIC regression results into one data frame
+fit3paramsdf = pd.concat([cubregBGC_LS,cubregBGC_ODR,cubregB_LS,cubregB_ODR])
 
 # CLEAR DATA FRAMES
 linregBGC_LS.drop(linregBGC_LS.index, inplace=True)
@@ -214,24 +221,25 @@ cubregB_ODR.drop(cubregB_ODR.index, inplace=True)
 # Saving fit information
 #==============================================================================
 print()
-fitsummarydf=fitsummarydf.append(fit3paramsdf)
-fitsummarydf=fitsummarydf.append(fitparamsdf)
-fitsummarydf=fitsummarydf.append(infodf)
+fitsummarydf=pd.concat([fitsummarydf,fit3paramsdf,fitparamsdf,infodf])
+#fitsummarydf=fitsummarydf,fitparamsdf)
+#fitsummarydf=fitsummarydfinfodf)
 
 fit1df=pd.DataFrame(data=[('','','','','','','',''),('y=m*x+c','','','','','','','')],columns=(fitparamscolumns))
-fitparamsdf=fitparamsdf.append(fit1df)
+fitparamsdf=pd.concat([fitparamsdf,fit1df])
 fit3df=pd.DataFrame(data=[('','','','','','','','','',''),('y=a*x^3 + c*x + d','','','','','','','','','')],columns=(fit3paramscolumns))
-fit3paramsdf=fit3paramsdf.append(fit3df)
+fit3paramsdf=pd.concat([fit3paramsdf,fit3df])
 
 print("Finished with data")
 fitparamsdf=fitparamsdf[fitparamscolumns]
 fit3paramsdf=fit3paramsdf[fit3paramscolumns]
 fitsummarydf=fitsummarydf[fitsummarycols]
-fits_writer=pd.ExcelWriter("{0}_rt{1}dt{2}_AllFits_{3}{4}_{5}{6}_newunceqns.xlsx".format(outputfilename,rt,dt,DorT,Sb,StandDev,WM))
-fitsummarydf.to_excel(fits_writer,"Summary")
-fitparamsdf.to_excel(fits_writer,"LinearFits")
-fit3paramsdf.to_excel(fits_writer,"CubicFits")
-fits_writer.save()
-print("All fit info saved in {0}_rt{1}dt{2}_AllFits_{3}{4}_{5}.xlsx".format(outputfilename,rt,dt,DorT,Sb,StandDev))
+output_excel_filename = "{0}_rt{1}dt{2}_AllFits_{3}{4}_{5}{6}_newunceqns.xlsx".format(outputfilename,rt,dt,DorT,Sb,StandDev,WM)
+with pd.ExcelWriter(output_excel_filename) as writer:
+    fitsummarydf.to_excel(writer,sheet_name="Summary")
+    fitparamsdf.to_excel(writer,sheet_name="LinearFits")
+    fit3paramsdf.to_excel(writer,sheet_name="CubicFits")
+#fits_writer.save()
+print("All fit info saved in {0}".format(output_excel_filename))
 fitparamsdf.drop(fitparamsdf.index, inplace=True)
 fit3paramsdf.drop(fit3paramsdf.index, inplace=True)

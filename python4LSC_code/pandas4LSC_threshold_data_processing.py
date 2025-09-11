@@ -1,0 +1,389 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Oct 11 14:55:29 2017
+
+@author: siobhant
+"""
+from __main__ import *
+
+# SPECIFIED BACKGROUND WITH ACCIDENTAL COINCIDENCES CORRECTION
+
+#==============================================================================
+# Basic stats functions
+#==============================================================================
+def weighted_mean_calc(unc_temp, n0_temp):
+    weight = 1/unc_temp**2
+    if weight_mean == 1:
+        wght_x_n0 = (n0_temp)*weight
+        wm_out = np.nansum(wght_x_n0)/np.nansum(weight)
+    else:
+        wm_out = np.nanmean(n0_temp)    
+    return wm_out, weight 
+
+def stdev_mean_theor_calc(weight):
+    stdev_mean_theor = np.sqrt(1/np.nansum(weight))    
+    return stdev_mean_theor
+
+#==============================================================================
+# Calculate decay factor for threshold data
+#==============================================================================
+def decay_factor(df, halflifeseconds, refdatetime, mass, dilution):
+    #calculate time difference between start time and reference time
+    df['Real as s']=pd.to_timedelta(df[' Real'],unit='s')
+    #df['Finished g']=pd.to_datetime(df[' Finished'])
+    df['timedif']=refdatetime-(df[' Finished']-df['Real as s'])
+    #change to seconds
+    df['timedif(s)']=df['timedif']/pd.Timedelta(seconds=1)
+    #calculate decay factor
+    df['Decay Factor']=(np.log(2)*df[' Real']/halflifeseconds/
+             (1-np.exp(-np.log(2)*df[' Real']/halflifeseconds))*
+             0.5**(df['timedif(s)']/halflifeseconds))
+
+    #Constants to include in dataframe
+    df['Reference datetime']=refdatetime
+    df['Source mass mg']=mass
+    df['Source dilution factor']=dilution
+
+    return df
+
+#==============================================================================
+# Accidental coincidences
+#==============================================================================
+def accidental_coincidences(df, rt):
+    # rt = resolving time
+    # All the bits of the Venn diagram for calculating accidental coincidences
+
+    ################# ASSUMING 3 CHANNELS
+    df['p3A'] = (df[' A']-df[' AB']-df[' AC']+df[' ABC'])/df[' Live']
+    df['p3B'] = (df[' B']-df[' AB']-df[' BC']+df[' ABC'])/df[' Live']
+    df['p3C'] = (df[' C']-df[' BC']-df[' AC']+df[' ABC'])/df[' Live']
+    
+    df['p3S'] = df['p3A']+df['p3B']+df['p3C']
+
+    df['p3AB'] = (df[' AB']-df[' ABC'])/df[' Live']
+    df['p3AC'] = (df[' AC']-df[' ABC'])/df[' Live']
+    df['p3BC'] = (df[' BC']-df[' ABC'])/df[' Live']
+
+    df['p3D'] = df['p3AB'] +df['p3AC'] +df['p3BC']
+
+    df['p3T'] = df[' ABC']/df[' Live']
+
+    # Accidental coincidences calculation for 3 CHANNELS
+    df['aAB'] = (2*(df['pA']*df['pB'] +df['pA']*df['pBC'] +df['pB']*df['pAC']
+                    +df['pAC']*df['pBC']) 
+                 +(df['pS'] +df['pD'] -df['pAB'])*(df['pAB'] +df['pT']))*rt
+    df['aBC'] = (2*(df['pA']*df['pB'] +df['pA']*df['pBC'] +df['pB']*df['pAC']
+                    +df['pAC']*df['pBC']) 
+                 +(df['pS'] +df['pD'] -df['pAB'])*(df['pAB'] +df['pT']))*rt
+    df['aAC'] = (2*(df['pA']*df['pB'] +df['pA']*df['pBC'] +df['pB']*df['pAC']
+                    +df['pAC']*df['pBC']) 
+                 +(df['pS'] +df['pD'] -df['pAB'])*(df['pAB'] +df['pT']))*rt
+
+    df['aD'] = (2*(df['pA']*df['pB'] +df['pA']*df['pBC'] +df['pB']*df['pAC']
+                    +df['pAC']*df['pBC']) 
+                 +(df['pS'] +df['pD'] -df['pAB'])*(df['pAB'] +df['pT']))*rt
+    
+    df['aT'] = (2*(df['pA']*df['pB'] +df['pA']*df['pBC'] +df['pB']*df['pAC']
+                    +df['pAC']*df['pBC']) 
+                 +(df['pS'] +df['pD'] -df['pAB'])*(df['pAB'] +df['pT']))*rt
+
+                    
+    ############## ASSUMING 4 CHANNELS
+    df['p4A'] = (df[' A']-df[' AB']-df[' AC']-df[' AX']
+                +df[' ABX']+df[' ACX']+df[' ABC']-df[' ABCX'])/df[' Live']
+    df['p4B'] = (df[' B']-df[' AB']-df[' BC']-df[' BX']
+                +df[' ABX']+df[' BCX']+df[' ABC']-df[' ABCX'])/df[' Live']
+    df['p4C'] = (df[' C']-df[' BC']-df[' AC']-df[' CX']
+                +df[' BCX']+df[' ACX']+df[' ABC']-df[' ABCX'])/df[' Live']
+    df['p4X'] = (df[' X']-df[' AX']-df[' BX']-df[' CX']
+                +df[' ABX']+df[' ACX']+df[' BCX']-df[' ABCX'])/df[' Live']
+    
+    df['p4S'] = df['p4A']+df['p4B']+df['p4C']+df['p4X']
+
+    df['p4AB'] = (df[' AB']-df[' ABX']-df[' ABC']+df[' ABCX'])/df[' Live']
+    df['p4AC'] = (df[' AC']-df[' ACX']-df[' ABC']+df[' ABCX'])/df[' Live']
+    df['p4BC'] = (df[' BC']-df[' BCX']-df[' ABC']+df[' ABCX'])/df[' Live']
+
+    df['p4AX'] = (df[' AX']-df[' ABX']-df[' ACX']+df[' ABCX'])/df[' Live']
+    df['p4BX'] = (df[' BX']-df[' ABX']-df[' BCX']+df[' ABCX'])/df[' Live']
+    df['p4CX'] = (df[' CX']-df[' ACX']-df[' BCX']+df[' ABCX'])/df[' Live']
+
+    df['p4D'] = df['p4AB'] +df['p4AC'] +df['p4BC'] +df['p4AX'] +df['p4BX'] +df['p4CX'] 
+
+    df['p4ABX'] = (df[' ABX']-df[' ABCX'])/df[' Live']
+    df['p4ACX'] = (df[' ACX']-df[' ABCX'])/df[' Live']
+    df['p4BCX'] = (df[' BCX']-df[' ABCX'])/df[' Live']
+
+    df['p4ABC'] = (df[' ABC']-df[' ABCX'])/df[' Live']
+
+    df['p4ABCX'] = df[' ABCX']/df[' Live']
+
+    # Accidental coincidences calculation for LDX types 4 CHANNELS
+    df['aLDX Type1'] = 2*rt*((df['p4X']+df['p4AX']+df['p4BX']+df['p4CX'])*(df['p4ABC']+df['p4AB']+df['p4AC']+df['p4BC'])
+                            +df['p4A']*(df['p4BX']+df['p4CX']) +df['p4B']*(df['p4AX']+df['p4CX']) +df['p4C']*(df['p4AX']+df['p4BX'])
+                            +df['p4AX']*df['p4BX'] +df['p4AX']*df['p4CX'] +df['p4BX']*df['p4CX'])
+
+    df['aLDX Type2'] = rt*(df['p4ABCX']*(df['p4S']+df['p4D']+df['p4ABC'])
+                           +df['p4ABX']*(df['p4S']-df['p4C']+df['p4AB']+df['p4AX']+df['p4BX'])
+                           +df['p4ACX']*(df['p4S']-df['p4B']+df['p4AC']+df['p4AX']+df['p4CX'])
+                           +df['p4BCX']*(df['p4S']-df['p4A']+df['p4BC']+df['p4BX']+df['p4CX']))
+    
+    df['aLDX'] = df['aLDX Type1'] + df['aLDX Type2']
+
+    return df
+
+#==============================================================================
+# Calculate corrected rates for logical doubles (LD, LDX, X)
+#==============================================================================
+def doubles_rates_corrected(df,backdf,i_index, accidental_coincidence_corr = 0):
+    thresh_backdf=backdf.iloc[[i_index]]
+    df['backLDr8']=thresh_backdf['backLDr8'].sum()
+    df['backXr8']=thresh_backdf['backXr8'].sum()
+    df['backLDXr8']=thresh_backdf['backLDXr8'].sum()
+    
+    if accidental_coincidence_corr == 0:
+        # LD Rate, decay and background corrected
+        df['LDr8']=(df[' LD']/df[' Live']-df['backLDr8'])*df['Decay Factor']
+        # X Rate, decay and background corrected
+        df['Xr8']=(df[' X']/df[' Live']-df['backXr8'])*df['Decay Factor']
+        # LDX Rate, decay and background corrected
+        df['LDXr8']=(df[' LDX']/df[' Live']-df['backLDXr8'])*df['Decay Factor']
+    else:
+        # LD Rate, decay, accidentals and background corrected
+        df['LDr8']=(df[' LD']/df[' Live']-df['backLDr8'])*df['Decay Factor']
+        # X Rate, decay and background corrected
+        df['Xr8']=(df[' X']/df[' Live']-df['backXr8'])*df['Decay Factor']
+        # LDX Rate, decay, accidentals and background corrected
+        df['LDXr8']=(df[' LDX']/df[' Live']-df['backLDXr8'])*df['Decay Factor']
+
+    return df
+  
+#==============================================================================
+# Calculate BG/C and associated stats
+#============================================================================== 
+def linearise_threshold_data(df, dilution, mass):
+    ### FREDAS EQN MATCHING
+    df['uncBG/C'] = (df['LDr8']*df['Xr8']/df['LDXr8'])*(dilution/mass)*np.sqrt((2*df[' LDX'])/(df[' LD']*df[' X']) - 1/df[' X'] - 1/df[' LD'] + 1/df[' LDX'])
+    wmBGC_CT, weightBGC_CT = weighted_mean_calc(df['uncBG/C'], (df['LDr8']*df['Xr8']/df['LDXr8'])*(dilution/mass)) 
+    stdev_theorBGC = stdev_mean_theor_calc(weightBGC_CT)
+    stdev_obsBGC = wmBGC_CT*np.sqrt(np.nanvar(df['LDr8'], ddof=1)/np.nanmean(df['LDr8'])**2 + np.nanvar(df['Xr8'], ddof=1)/np.nanmean(df['Xr8'])**2 + np.nanvar(df['LDXr8'], ddof=1)/np.nanmean(df['LDXr8'])**2 
+                                       + (2*np.cov(df['LDr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDr8'])*np.nanmean(df['Xr8'])) 
+                                          - (2*np.cov(df['LDXr8'],df['LDr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['LDr8']))  
+                                              - (2*np.cov(df['LDXr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['Xr8'])))/np.sqrt(np.count_nonzero(~np.isnan(df['LDr8'])) - 1)
+    
+    df['uncB'] = df['LDr8']*(dilution/mass)*np.sqrt((2*df[' LDX'])/(df[' LD']*df[' X']) - 1/df[' X'] - 1/df[' LD'] + 1/df[' LDX'])
+    wmB_CT_Freda, weightB_CT_Freda = weighted_mean_calc(df['uncB'], df['LDr8']*(dilution/mass)) 
+    stdev_theorB_Freda = stdev_mean_theor_calc(weightB_CT_Freda)
+    stdev_obsB_Freda = wmB_CT_Freda*np.sqrt(np.nanvar(df['LDr8'], ddof=1)/np.nanmean(df['LDr8'])**2 + np.nanvar(df['Xr8'], ddof=1)/np.nanmean(df['Xr8'])**2 + np.nanvar(df['LDXr8'], ddof=1)/np.nanmean(df['LDXr8'])**2 
+                                       + (2*np.cov(df['LDr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDr8'])*np.nanmean(df['Xr8'])) 
+                                          - (2*np.cov(df['LDXr8'],df['LDr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['LDr8']))  
+                                              - (2*np.cov(df['LDXr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['Xr8'])))/np.sqrt(np.count_nonzero(~np.isnan(df['LDr8'])) - 1)
+    stdev_obsB_ODRonly = wmB_CT_Freda*np.sqrt(np.nanvar(df['LDr8'], ddof=1)/np.nanmean(df['LDr8'])**2)/np.sqrt(np.count_nonzero(~np.isnan(df['LDr8'])) - 1)
+    
+    df['uncG/C-1'] = (df['Xr8']/df['LDXr8'] - 1)*np.sqrt(df[' X']/(df[' LDX']*(df[' X'] - df[' LDX'])))
+    wmGC_1_CT, weightGC_1_CT = weighted_mean_calc(df['uncG/C-1'], (df['Xr8']/df['LDXr8'] - 1)) 
+    stdev_theorGC_1 = stdev_mean_theor_calc(weightGC_1_CT)
+    stdev_obsGC_1 = (wmGC_1_CT+1)*np.sqrt(np.nanvar(df['LDXr8'], ddof=1)/np.nanmean(df['LDXr8'])**2 + np.nanvar(df['Xr8'], ddof=1)/np.nanmean(df['Xr8'])**2
+                     - (2*np.cov(df['LDXr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['Xr8'])))/np.sqrt(np.count_nonzero(~np.isnan(df['LDXr8'])) - 1)    
+      
+    df['unc1-C/G'] = (1-df['LDXr8']/df['Xr8'])*np.sqrt(df[' LDX']/(df[' X']*(df[' X'] - df[' LDX'])))
+    wm1_CG_CT, weight1_CG_CT = weighted_mean_calc(df['unc1-C/G'], (1-df['LDXr8']/df['Xr8'])) 
+    stdev_theor1_CG = stdev_mean_theor_calc(weight1_CG_CT)
+    stdev_obs1_CG = (1-wm1_CG_CT)*np.sqrt(np.nanvar(df['LDXr8'], ddof=1)/np.nanmean(df['LDXr8'])**2 + np.nanvar(df['Xr8'], ddof=1)/np.nanmean(df['Xr8'])**2
+                     - (2*np.cov(df['LDXr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['Xr8'])))/np.sqrt(np.count_nonzero(~np.isnan(df['LDXr8'])) - 1)    
+  
+    unc_params = np.array([wmGC_1_CT, stdev_theorGC_1, stdev_obsGC_1, wmBGC_CT, stdev_theorBGC, stdev_obsBGC, 
+                           wm1_CG_CT, stdev_theor1_CG, stdev_obs1_CG, wmB_CT_Freda, stdev_theorB_Freda, stdev_obsB_Freda, stdev_obsB_ODRonly])
+    
+    return df, unc_params 
+
+#==============================================================================
+# Get data and put it into a dataframe
+#==============================================================================
+def get_data(file_dir,file_list, file_type = 'excel'):
+
+    for i in range(len(file_list)):
+        file_name = file_list[i][0]
+        file_threshold_mV = file_list[i][1]
+        file_path="{0}/{1}".format(file_dir,file_name)
+
+        # na_values = 0 means it treats zero counts as corrupted files / ignore them
+        # TO READ CSV FILES
+        if file_type == 'csv':
+            thresh_df_i = pd.read_csv(file_path, sep=',', skiprows=5, na_values=0, index_col=0,dayfirst=True, parse_dates=[20], infer_datetime_format=True)
+        
+        # TO READ EXCEL FILES
+        elif file_type == 'excel':
+            thresh_df_i = pd.read_excel(file_path, skiprows=5, na_values=0, index_col=0)
+        
+        # Deletes empty rows in dataframe
+        thresh_df_i = thresh_df_i.dropna(how='all')
+
+        thresh_df_i['Threshold voltage (mV)'] = file_threshold_mV
+
+        # if first data file, initialise threshold dataframe
+        if i == 0:
+            thresh_df = thresh_df_i
+        # else add data from this threshold to existing data frame
+        else:
+            thresh_df = pd.concat([thresh_df, thresh_df_i])
+
+        print('Read file {0}'.format(file_path))
+
+    return thresh_df
+
+
+#==============================================================================
+# STATSGET 
+# Generates values for use in regressions, and calculates a variety of 
+# statistics...
+# For G/C-1 and 1-C/G ('independent variables'): weighted mean, 
+# theoretical standard deviation of weighted mean.
+# 
+# For BG/C and B ('Dependent variables'): weighted mean, 
+# theoretical standard deviation of weighted mean, 
+# theoretical standard deviation of weighted mean as a relative %, 
+# observed variance in the weighted mean, 
+# observed standard deviation in weighted mean, 
+# and the observed standard deviation of the weighted mean as a relative % 
+# mean
+# 
+#==============================================================================
+
+# def statsget(unc_params):
+#     return [(unc_params[0], unc_params[1], unc_params[2],
+#              unc_params[3], unc_params[4], unc_params[5], '',
+#              unc_params[6], unc_params[7], unc_params[8],
+#              unc_params[9], unc_params[10], unc_params[11], unc_params[12])]
+             
+# #==============================================================================
+# # For Speedy File Grabber
+# #==============================================================================
+
+# def startstring(char, stringlist):
+#     newlist = []
+#     for string in stringlist:
+#         if string.startswith(char):
+#             newlist.append(string)
+#     newlist.sort()
+#     return newlist
+
+# #==============================================================================
+# # Speedy file grabber
+# #==============================================================================
+# if speedyfilegrabber:
+#     path  = os.getcwd()
+#     path1 = "{0}/{1}".format(path,rtdt1dir)
+#     filenames1 = os.listdir(path1)
+    
+#     bkgs1 = startstring(bkgprefix,filenames1)
+#     files1 = startstring(dataprefix, filenames1)
+    
+    
+#     print()
+#     print('Running pandas4LSC')
+#     print('Checking files')
+#     LB=len(bkgs1)
+#     LD=len(files1)
+#     if LB == LD:
+#         pass
+#     else:
+#         print()
+#         print('!!!ATTENTION!!! Different number of background files and data files')
+#         print('Since there is a mismatch with background and data files')
+#         print('Take another look at your files and rename or delete as necessary, then run code again')
+#         print()
+#         sys.exit('')
+    
+#     print("Check background files have corresponding threshold data files:")
+#     i=0
+#     if LD > LB:
+#         l=LB
+#     else:
+#         l=LD
+#     while i < l:
+#         print("{0} --- {1}".format(bkgs1[i],files1[i]))
+#         print()
+#         i=i+1
+#     g2g=input('Does every entry in the list match its background file? type Y or N:  ')
+    
+#     if g2g=='N':
+#         print()
+#         print('Since there is a mismatch with background and data files')
+#         print('Take another look at your files and rename or delete as necessary, then run code again')
+#         print()
+#         sys.exit('')
+#     if g2g=='Y':
+#         print('Data analysis happening now!')
+# else:
+#     pass
+# #==============================================================================
+# # Organising all those files and directories
+# #=========================================="170914_bkg_30mV.csv"====================================
+
+# rtdtdirectories=(rtdt1dir)
+# rtdtinfo=(rt,dt)
+
+# if speedyfilegrabber:
+#     bckgrnds1=bkgs1 #for speedy file grabber
+#     threshfiles1=files1 #for speedy file grabber
+# else:
+#     threshfiles1=(thresh1A,thresh1B,thresh1C,thresh1D,thresh1E,thresh1F,thresh1G,
+#               thresh1H,thresh1I,thresh1J,thresh1K,thresh1L,thresh1M,thresh1N,
+#               thresh1O,thresh1P,thresh1Q)
+
+# ##==============================================================================
+# ## Building Data Frames
+# ##==============================================================================
+# threshcolumns= [
+# ' A', ' B', ' C',' AB', ' AC', ' BC', ' ABC', ' X', ' ABX', ' ACX', ' BCX', 
+# ' ABCX', ' Real', ' Live', ' LD', ' LDX', ' Started', 
+# ' Finished', 'Source mass mg', 'Source dilution factor', 'Reference datetime', 
+# 'timedif(s)','Decay Factor', 'backLDr8','LDr8','backXr8', 'Xr8','backLDXr8', 'LDXr8', 
+# 'uncBG/C', 'uncB', 'uncG/C-1', 'unc1-C/G']
+
+# #threshdf=pd.DataFrame(data=[], columns=(threshcolumns))
+
+
+# regcolumns=['G/C-1 WM', 'Stdev of Mean G/C-1 (Theor)', 'Stdev of Mean G/C-1 (Obs)',
+# 'BG/C WM', 'Stdev of Mean BGC (Theor)', 'Stdev of Mean BGC (Obs)', '',
+# '1-C/G WM', 'Stdev of Mean 1-C/G (Theor)', 'Stdev of Mean 1-C/G (Obs)', 
+# 'B WM', 'Stdev of Mean B (Theor)', 'Stdev of Mean B (Obs)', 'Stdev of Mean B (Obs)(ODR only)']
+
+# #regdf=pd.DataFrame(data=[],columns=(regcolumns))
+
+# #==============================================================================
+# # ANALYSIS
+# #==============================================================================
+
+# dirname=rtdt1dir
+# i=0
+# for i in range(len(threshfiles1)):
+#     if threshfiles1[i]:
+#         thresh1df, unc_params = dataget(dirname,threshfiles1[i],backgroundexcel,i)
+#         stats1=statsget(unc_params)
+#         reg1df=pd.DataFrame(data=stats1,index=[i],columns=regcolumns)
+#         if i == 0:
+#             # initialise previously empty dataframes
+#             threshdf=thresh1df
+#             regdf=reg1df
+#         else:
+#             # add to dataframes
+#             threshdf=pd.concat([threshdf,thresh1df])
+#             regdf=pd.concat([regdf,reg1df])
+
+
+# regdf=regdf[regcolumns]
+# regdf=regdf.sort_values('G/C-1 WM')
+# regdf.to_excel("{0}_rt{1}dt{2}_RegData_{3}{4}{5}_newunceqns.xlsx".format(outputfilename,rt,dt,DorT,Sb,WM))
+# regdf.drop(regdf.index, inplace=True)
+# threshdf=threshdf[threshcolumns]
+# threshdf.to_excel("{0}_rt{1}dt{2}_ThreshData_{3}{4}{5}_newunceqns.xlsx".format(outputfilename,rt,dt,DorT,Sb,WM))
+# threshdf.drop(threshdf.index, inplace=True)
+
+
+# print()
+# print('Finished with different thresholds in {0}'.format(dirname))
+
+    
+   ############ END ############
