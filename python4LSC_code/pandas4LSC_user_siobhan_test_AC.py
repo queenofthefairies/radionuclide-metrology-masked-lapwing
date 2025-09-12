@@ -55,7 +55,8 @@ weight_mean = 1 # 0=NO 1=YES
 data_dir="csvs_LS2_win2"
 
 #==============================================================================
-# FILES
+# LIST OF DATA FILES
+# format is [filename, threshold_voltage_in_mV]
 data_filename_list = [["LS2_win2_20mV.xlsx", 20],
                       ["LS2_win2_50mV.xlsx", 50],
                       ["LS2_win2_100mV.xlsx", 100],
@@ -68,7 +69,6 @@ data_filename_list = [["LS2_win2_20mV.xlsx", 20],
                       ["LS2_win2_800mV.xlsx", 800],
                       ["LS2_win2_900mV.xlsx", 900]
                      ]
-
 
 #==============================================================================
 """ If you are specifying backgrounds with a single excel spreadsheet """
@@ -103,7 +103,37 @@ back1Q=0
 #==============================================================================
 #~~~~~~~~~~~~~~~~ NO MORE USER INPUT REQUIRED UNLESS PROMPTED ~~~~~~~~~~~~~~~~~
 
-# Filename suffix
+
+
+############### ANALYSING BACKGROUND DATA
+# Load background data
+back_file_path = data_dir + '/' + backgroundexcel
+back_df = pd.read_excel(back_file_path, skiprows=0, na_values=0, index_col=0)
+
+
+
+############### ANALYSING THRESHOLD DATA
+# Load threshold data
+thresh_df = LSC_data_processing.get_data(data_dir, data_filename_list, 
+                                         file_type = 'excel')
+# calculate decay factor
+thresh_df = LSC_data_processing.decay_factor(thresh_df, halflifeseconds, 
+                                             refdatetime, mass, dilution)
+# calculate accidental coincidences
+if accidental_coinc == 1:
+    threshdf = LSC_data_processing.accidental_coincidences(thresh_df, rt)
+
+# apply corrections (background, decay factor, accidental coinc if requested)
+thresh_df = LSC_data_processing.doubles_rates_corrected(thresh_df,back_df,
+                                                        accidental_coincidence_corr = accidental_coinc)
+
+# linearise threshold data
+thresh_df, unc_params = LSC_data_processing.linearise_threshold_data(thresh_df, 
+                                                                     dilution, 
+                                                                     mass,
+                                                                     weight_mean)
+
+# Set up filename suffix
 if doubles_data==1:
     DorT='doubles'
     if weight_mean == 1:
@@ -114,13 +144,13 @@ if doubles_data==1:
         Sb='_SB'
     else:
         Sb=''
-
-# Load threshold data
-thresh_df = LSC_data_processing.get_data(data_dir, data_filename_list, file_type = 'excel')
-# calculate decay factor
-thresh_df = LSC_data_processing.decay_factor(thresh_df, halflifeseconds, refdatetime, mass, dilution)
-        
-print(thresh_df)
+    if accidental_coinc == 1:
+        ACcorr = '_ACcorr'
+    else:
+        ACcorr = ''
+# save threshold dataframe to excel spreadsheet
+threshdf.to_excel("{0}_rt{1}dt{2}_ThreshData_{3}{4}{5}{6}_siobhan2025.xlsx".format(outputfilename,rt,dt,DorT,Sb,WM,ACcorr))
+#threshdf.drop(threshdf.index, inplace=True)
         
 # # Data for regression
 # filename="{0}_rt{1}dt{2}_RegData_{3}{4}{5}_newunceqns.xlsx".format(outputfilename,rt,dt,DorT,Sb,WM)
