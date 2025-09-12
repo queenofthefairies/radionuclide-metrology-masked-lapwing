@@ -8,9 +8,6 @@ import os
 import pandas as pd
 import numpy as np
 import datetime
-#from __main__ import *
-
-# SPECIFIED BACKGROUND WITH ACCIDENTAL COINCIDENCES CORRECTION
 
 #==============================================================================
 # Basic stats functions
@@ -229,9 +226,7 @@ def doubles_rates_corrected(df,back_df, accidental_coincidence_corr = 0):
 #==============================================================================
 # Calculate BG/C and associated stats
 #============================================================================== 
-def linearise_threshold_data(df, dilution, mass, weight_mean_bool):
-    # weight_mean_bool is a boolean 
-    # i.e. if weight_mean_bool == 1, calculate weighted mean
+def linearise_threshold_data(df, dilution, mass):
     # linearise the threshold data
     df['BG/C'] = df['LDr8']*df['Xr8']/df['LDXr8']*dilution/mass
     df['B'] = df['LDr8']*(dilution/mass)
@@ -239,44 +234,44 @@ def linearise_threshold_data(df, dilution, mass, weight_mean_bool):
     df['1-C/G'] = 1 - df['LDXr8']/df['Xr8']
 
     # uncertainty equations
-    ### FREDAS EQN MATCHING
     df['uncBG/C'] = df['BG/C']*np.sqrt((2*df[' LDX'])/(df[' LD']*df[' X']) - 1/df[' X'] - 1/df[' LD'] + 1/df[' LDX'])
-    wmBGC_CT, weightBGC_CT = weighted_mean_calc(df['uncBG/C'], df['BG/C'], weight_mean_bool) 
-    stdev_theorBGC = stdev_mean_theor_calc(weightBGC_CT)
-    stdev_obsBGC = wmBGC_CT*np.sqrt(np.nanvar(df['LDr8'], ddof=1)/np.nanmean(df['LDr8'])**2 + np.nanvar(df['Xr8'], ddof=1)/np.nanmean(df['Xr8'])**2 + np.nanvar(df['LDXr8'], ddof=1)/np.nanmean(df['LDXr8'])**2 
-                                       + (2*np.cov(df['LDr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDr8'])*np.nanmean(df['Xr8'])) 
-                                          - (2*np.cov(df['LDXr8'],df['LDr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['LDr8']))  
-                                              - (2*np.cov(df['LDXr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['Xr8'])))/np.sqrt(np.count_nonzero(~np.isnan(df['LDr8'])) - 1)
-    
     df['uncB'] = df['B']*np.sqrt((2*df[' LDX'])/(df[' LD']*df[' X']) - 1/df[' X'] - 1/df[' LD'] + 1/df[' LDX'])
-    wmB_CT_Freda, weightB_CT_Freda = weighted_mean_calc(df['uncB'], df['B'], weight_mean_bool) 
-    stdev_theorB_Freda = stdev_mean_theor_calc(weightB_CT_Freda)
-    stdev_obsB_Freda = wmB_CT_Freda*np.sqrt(np.nanvar(df['LDr8'], ddof=1)/np.nanmean(df['LDr8'])**2 + np.nanvar(df['Xr8'], ddof=1)/np.nanmean(df['Xr8'])**2 + np.nanvar(df['LDXr8'], ddof=1)/np.nanmean(df['LDXr8'])**2 
-                                       + (2*np.cov(df['LDr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDr8'])*np.nanmean(df['Xr8'])) 
-                                          - (2*np.cov(df['LDXr8'],df['LDr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['LDr8']))  
-                                              - (2*np.cov(df['LDXr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['Xr8'])))/np.sqrt(np.count_nonzero(~np.isnan(df['LDr8'])) - 1)
-    stdev_obsB_ODRonly = wmB_CT_Freda*np.sqrt(np.nanvar(df['LDr8'], ddof=1)/np.nanmean(df['LDr8'])**2)/np.sqrt(np.count_nonzero(~np.isnan(df['LDr8'])) - 1)
-    
     df['uncG/C-1'] = df['G/C-1']*np.sqrt(df[' X']/(df[' LDX']*(df[' X'] - df[' LDX'])))
-    wmGC_1_CT, weightGC_1_CT = weighted_mean_calc(df['uncG/C-1'], df['G/C-1'], weight_mean_bool) 
-    stdev_theorGC_1 = stdev_mean_theor_calc(weightGC_1_CT)
-    stdev_obsGC_1 = (wmGC_1_CT+1)*np.sqrt(np.nanvar(df['LDXr8'], ddof=1)/np.nanmean(df['LDXr8'])**2 + np.nanvar(df['Xr8'], ddof=1)/np.nanmean(df['Xr8'])**2
-                     - (2*np.cov(df['LDXr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['Xr8'])))/np.sqrt(np.count_nonzero(~np.isnan(df['LDXr8'])) - 1)    
-      
     df['unc1-C/G'] = df['1-C/G']*np.sqrt(df[' LDX']/(df[' X']*(df[' X'] - df[' LDX'])))
-    wm1_CG_CT, weight1_CG_CT = weighted_mean_calc(df['unc1-C/G'], df['1-C/G'], weight_mean_bool) 
-    stdev_theor1_CG = stdev_mean_theor_calc(weight1_CG_CT)
-    stdev_obs1_CG = (1-wm1_CG_CT)*np.sqrt(np.nanvar(df['LDXr8'], ddof=1)/np.nanmean(df['LDXr8'])**2 + np.nanvar(df['Xr8'], ddof=1)/np.nanmean(df['Xr8'])**2
-                     - (2*np.cov(df['LDXr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['Xr8'])))/np.sqrt(np.count_nonzero(~np.isnan(df['LDXr8'])) - 1)    
+
+    ### FREDAS EQN MATCHING
+    
+    # wmBGC_CT, weightBGC_CT = weighted_mean_calc(df['uncBG/C'], df['BG/C'], weight_mean_bool) 
+    # stdev_theorBGC = stdev_mean_theor_calc(weightBGC_CT)
+    # stdev_obsBGC = wmBGC_CT*np.sqrt(np.nanvar(df['LDr8'], ddof=1)/np.nanmean(df['LDr8'])**2 + np.nanvar(df['Xr8'], ddof=1)/np.nanmean(df['Xr8'])**2 + np.nanvar(df['LDXr8'], ddof=1)/np.nanmean(df['LDXr8'])**2 
+    #                                    + (2*np.cov(df['LDr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDr8'])*np.nanmean(df['Xr8'])) 
+    #                                       - (2*np.cov(df['LDXr8'],df['LDr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['LDr8']))  
+    #                                           - (2*np.cov(df['LDXr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['Xr8'])))/np.sqrt(np.count_nonzero(~np.isnan(df['LDr8'])) - 1)
+    
+
+    # wmB_CT_Freda, weightB_CT_Freda = weighted_mean_calc(df['uncB'], df['B'], weight_mean_bool) 
+    # stdev_theorB_Freda = stdev_mean_theor_calc(weightB_CT_Freda)
+    # stdev_obsB_Freda = wmB_CT_Freda*np.sqrt(np.nanvar(df['LDr8'], ddof=1)/np.nanmean(df['LDr8'])**2 + np.nanvar(df['Xr8'], ddof=1)/np.nanmean(df['Xr8'])**2 + np.nanvar(df['LDXr8'], ddof=1)/np.nanmean(df['LDXr8'])**2 
+    #                                    + (2*np.cov(df['LDr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDr8'])*np.nanmean(df['Xr8'])) 
+    #                                       - (2*np.cov(df['LDXr8'],df['LDr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['LDr8']))  
+    #                                           - (2*np.cov(df['LDXr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['Xr8'])))/np.sqrt(np.count_nonzero(~np.isnan(df['LDr8'])) - 1)
+    # stdev_obsB_ODRonly = wmB_CT_Freda*np.sqrt(np.nanvar(df['LDr8'], ddof=1)/np.nanmean(df['LDr8'])**2)/np.sqrt(np.count_nonzero(~np.isnan(df['LDr8'])) - 1)
+    
+    # wmGC_1_CT, weightGC_1_CT = weighted_mean_calc(df['uncG/C-1'], df['G/C-1'], weight_mean_bool) 
+    # stdev_theorGC_1 = stdev_mean_theor_calc(weightGC_1_CT)
+    # stdev_obsGC_1 = (wmGC_1_CT+1)*np.sqrt(np.nanvar(df['LDXr8'], ddof=1)/np.nanmean(df['LDXr8'])**2 + np.nanvar(df['Xr8'], ddof=1)/np.nanmean(df['Xr8'])**2
+    #                  - (2*np.cov(df['LDXr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['Xr8'])))/np.sqrt(np.count_nonzero(~np.isnan(df['LDXr8'])) - 1)    
+      
+    # wm1_CG_CT, weight1_CG_CT = weighted_mean_calc(df['unc1-C/G'], df['1-C/G'], weight_mean_bool) 
+    # stdev_theor1_CG = stdev_mean_theor_calc(weight1_CG_CT)
+    # stdev_obs1_CG = (1-wm1_CG_CT)*np.sqrt(np.nanvar(df['LDXr8'], ddof=1)/np.nanmean(df['LDXr8'])**2 + np.nanvar(df['Xr8'], ddof=1)/np.nanmean(df['Xr8'])**2
+    #                  - (2*np.cov(df['LDXr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['Xr8'])))/np.sqrt(np.count_nonzero(~np.isnan(df['LDXr8'])) - 1)    
   
-    unc_params = np.array([wmGC_1_CT, stdev_theorGC_1, stdev_obsGC_1, wmBGC_CT, stdev_theorBGC, stdev_obsBGC, 
-                           wm1_CG_CT, stdev_theor1_CG, stdev_obs1_CG, wmB_CT_Freda, stdev_theorB_Freda, stdev_obsB_Freda, stdev_obsB_ODRonly])
+    # unc_params = np.array([wmGC_1_CT, stdev_theorGC_1, stdev_obsGC_1, wmBGC_CT, stdev_theorBGC, stdev_obsBGC, 
+    #                        wm1_CG_CT, stdev_theor1_CG, stdev_obs1_CG, wmB_CT_Freda, stdev_theorB_Freda, stdev_obsB_Freda, stdev_obsB_ODRonly])
 
     print('Linearised threshold data')
     return df, unc_params 
-
-
-
 
 #==============================================================================
 # STATSGET 
@@ -295,87 +290,50 @@ def linearise_threshold_data(df, dilution, mass, weight_mean_bool):
 # 
 #==============================================================================
 
-# def statsget(unc_params):
-#     return [(unc_params[0], unc_params[1], unc_params[2],
-#              unc_params[3], unc_params[4], unc_params[5], '',
-#              unc_params[6], unc_params[7], unc_params[8],
-#              unc_params[9], unc_params[10], unc_params[11], unc_params[12])]
+def stats_get(df, weight_mean_bool):
+    # weight_mean_bool is a boolean 
+    # i.e. if weight_mean_bool == 1, calculate weighted mean
+
+    # this function produces the regression data (i.e. takes weighted means 
+    # of threshold data)
+
+    # BG/C Freda's equations
+    wmBGC_CT, weightBGC_CT = weighted_mean_calc(df['uncBG/C'], df['BG/C'], weight_mean_bool) 
+    stdev_theorBGC = stdev_mean_theor_calc(weightBGC_CT)
+    stdev_obsBGC = wmBGC_CT*np.sqrt(np.nanvar(df['LDr8'], ddof=1)/np.nanmean(df['LDr8'])**2 + np.nanvar(df['Xr8'], ddof=1)/np.nanmean(df['Xr8'])**2 + np.nanvar(df['LDXr8'], ddof=1)/np.nanmean(df['LDXr8'])**2 
+                                       + (2*np.cov(df['LDr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDr8'])*np.nanmean(df['Xr8'])) 
+                                          - (2*np.cov(df['LDXr8'],df['LDr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['LDr8']))  
+                                              - (2*np.cov(df['LDXr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['Xr8'])))/np.sqrt(np.count_nonzero(~np.isnan(df['LDr8'])) - 1)
+
+    # B Freda's equations
+    wmB_CT_Freda, weightB_CT_Freda = weighted_mean_calc(df['uncB'], df['B'], weight_mean_bool) 
+    stdev_theorB_Freda = stdev_mean_theor_calc(weightB_CT_Freda)
+    stdev_obsB_Freda = wmB_CT_Freda*np.sqrt(np.nanvar(df['LDr8'], ddof=1)/np.nanmean(df['LDr8'])**2 + np.nanvar(df['Xr8'], ddof=1)/np.nanmean(df['Xr8'])**2 + np.nanvar(df['LDXr8'], ddof=1)/np.nanmean(df['LDXr8'])**2 
+                                       + (2*np.cov(df['LDr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDr8'])*np.nanmean(df['Xr8'])) 
+                                          - (2*np.cov(df['LDXr8'],df['LDr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['LDr8']))  
+                                              - (2*np.cov(df['LDXr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['Xr8'])))/np.sqrt(np.count_nonzero(~np.isnan(df['LDr8'])) - 1)
+    stdev_obsB_ODRonly = wmB_CT_Freda*np.sqrt(np.nanvar(df['LDr8'], ddof=1)/np.nanmean(df['LDr8'])**2)/np.sqrt(np.count_nonzero(~np.isnan(df['LDr8'])) - 1)
+
+    # G/C - 1 Freda's equations
+    wmGC_1_CT, weightGC_1_CT = weighted_mean_calc(df['uncG/C-1'], df['G/C-1'], weight_mean_bool) 
+    stdev_theorGC_1 = stdev_mean_theor_calc(weightGC_1_CT)
+    stdev_obsGC_1 = (wmGC_1_CT+1)*np.sqrt(np.nanvar(df['LDXr8'], ddof=1)/np.nanmean(df['LDXr8'])**2 + np.nanvar(df['Xr8'], ddof=1)/np.nanmean(df['Xr8'])**2
+                     - (2*np.cov(df['LDXr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['Xr8'])))/np.sqrt(np.count_nonzero(~np.isnan(df['LDXr8'])) - 1)  
+
+    # 1 - C/G Freda's equations
+    wm1_CG_CT, weight1_CG_CT = weighted_mean_calc(df['unc1-C/G'], df['1-C/G'], weight_mean_bool) 
+    stdev_theor1_CG = stdev_mean_theor_calc(weight1_CG_CT)
+    stdev_obs1_CG = (1-wm1_CG_CT)*np.sqrt(np.nanvar(df['LDXr8'], ddof=1)/np.nanmean(df['LDXr8'])**2 + np.nanvar(df['Xr8'], ddof=1)/np.nanmean(df['Xr8'])**2
+                     - (2*np.cov(df['LDXr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['Xr8'])))/np.sqrt(np.count_nonzero(~np.isnan(df['LDXr8'])) - 1)    
+  
+    unc_params = np.array([wmGC_1_CT, stdev_theorGC_1, stdev_obsGC_1, wmBGC_CT, stdev_theorBGC, stdev_obsBGC, 
+                           wm1_CG_CT, stdev_theor1_CG, stdev_obs1_CG, wmB_CT_Freda, stdev_theorB_Freda, stdev_obsB_Freda, stdev_obsB_ODRonly])
+
+    return [(unc_params[0], unc_params[1], unc_params[2],
+             unc_params[3], unc_params[4], unc_params[5], '',
+             unc_params[6], unc_params[7], unc_params[8],
+             unc_params[9], unc_params[10], unc_params[11], unc_params[12])]
              
-# #==============================================================================
-# # For Speedy File Grabber
-# #==============================================================================
-
-# def startstring(char, stringlist):
-#     newlist = []
-#     for string in stringlist:
-#         if string.startswith(char):
-#             newlist.append(string)
-#     newlist.sort()
-#     return newlist
-
-# #==============================================================================
-# # Speedy file grabber
-# #==============================================================================
-# if speedyfilegrabber:
-#     path  = os.getcwd()
-#     path1 = "{0}/{1}".format(path,rtdt1dir)
-#     filenames1 = os.listdir(path1)
-    
-#     bkgs1 = startstring(bkgprefix,filenames1)
-#     files1 = startstring(dataprefix, filenames1)
-    
-    
-#     print()
-#     print('Running pandas4LSC')
-#     print('Checking files')
-#     LB=len(bkgs1)
-#     LD=len(files1)
-#     if LB == LD:
-#         pass
-#     else:
-#         print()
-#         print('!!!ATTENTION!!! Different number of background files and data files')
-#         print('Since there is a mismatch with background and data files')
-#         print('Take another look at your files and rename or delete as necessary, then run code again')
-#         print()
-#         sys.exit('')
-    
-#     print("Check background files have corresponding threshold data files:")
-#     i=0
-#     if LD > LB:
-#         l=LB
-#     else:
-#         l=LD
-#     while i < l:
-#         print("{0} --- {1}".format(bkgs1[i],files1[i]))
-#         print()
-#         i=i+1
-#     g2g=input('Does every entry in the list match its background file? type Y or N:  ')
-    
-#     if g2g=='N':
-#         print()
-#         print('Since there is a mismatch with background and data files')
-#         print('Take another look at your files and rename or delete as necessary, then run code again')
-#         print()
-#         sys.exit('')
-#     if g2g=='Y':
-#         print('Data analysis happening now!')
-# else:
-#     pass
-# #==============================================================================
-# # Organising all those files and directories
-# #=========================================="170914_bkg_30mV.csv"====================================
-
-# rtdtdirectories=(rtdt1dir)
-# rtdtinfo=(rt,dt)
-
-# if speedyfilegrabber:
-#     bckgrnds1=bkgs1 #for speedy file grabber
-#     threshfiles1=files1 #for speedy file grabber
-# else:
-#     threshfiles1=(thresh1A,thresh1B,thresh1C,thresh1D,thresh1E,thresh1F,thresh1G,
-#               thresh1H,thresh1I,thresh1J,thresh1K,thresh1L,thresh1M,thresh1N,
-#               thresh1O,thresh1P,thresh1Q)
 
 # ##==============================================================================
 # ## Building Data Frames
