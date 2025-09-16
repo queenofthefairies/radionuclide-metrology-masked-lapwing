@@ -239,39 +239,8 @@ def linearise_threshold_data(df, dilution, mass):
     df['uncG/C-1'] = df['G/C-1']*np.sqrt(df[' X']/(df[' LDX']*(df[' X'] - df[' LDX'])))
     df['unc1-C/G'] = df['1-C/G']*np.sqrt(df[' LDX']/(df[' X']*(df[' X'] - df[' LDX'])))
 
-    ### FREDAS EQN MATCHING
-    
-    # wmBGC_CT, weightBGC_CT = weighted_mean_calc(df['uncBG/C'], df['BG/C'], weight_mean_bool) 
-    # stdev_theorBGC = stdev_mean_theor_calc(weightBGC_CT)
-    # stdev_obsBGC = wmBGC_CT*np.sqrt(np.nanvar(df['LDr8'], ddof=1)/np.nanmean(df['LDr8'])**2 + np.nanvar(df['Xr8'], ddof=1)/np.nanmean(df['Xr8'])**2 + np.nanvar(df['LDXr8'], ddof=1)/np.nanmean(df['LDXr8'])**2 
-    #                                    + (2*np.cov(df['LDr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDr8'])*np.nanmean(df['Xr8'])) 
-    #                                       - (2*np.cov(df['LDXr8'],df['LDr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['LDr8']))  
-    #                                           - (2*np.cov(df['LDXr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['Xr8'])))/np.sqrt(np.count_nonzero(~np.isnan(df['LDr8'])) - 1)
-    
-
-    # wmB_CT_Freda, weightB_CT_Freda = weighted_mean_calc(df['uncB'], df['B'], weight_mean_bool) 
-    # stdev_theorB_Freda = stdev_mean_theor_calc(weightB_CT_Freda)
-    # stdev_obsB_Freda = wmB_CT_Freda*np.sqrt(np.nanvar(df['LDr8'], ddof=1)/np.nanmean(df['LDr8'])**2 + np.nanvar(df['Xr8'], ddof=1)/np.nanmean(df['Xr8'])**2 + np.nanvar(df['LDXr8'], ddof=1)/np.nanmean(df['LDXr8'])**2 
-    #                                    + (2*np.cov(df['LDr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDr8'])*np.nanmean(df['Xr8'])) 
-    #                                       - (2*np.cov(df['LDXr8'],df['LDr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['LDr8']))  
-    #                                           - (2*np.cov(df['LDXr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['Xr8'])))/np.sqrt(np.count_nonzero(~np.isnan(df['LDr8'])) - 1)
-    # stdev_obsB_ODRonly = wmB_CT_Freda*np.sqrt(np.nanvar(df['LDr8'], ddof=1)/np.nanmean(df['LDr8'])**2)/np.sqrt(np.count_nonzero(~np.isnan(df['LDr8'])) - 1)
-    
-    # wmGC_1_CT, weightGC_1_CT = weighted_mean_calc(df['uncG/C-1'], df['G/C-1'], weight_mean_bool) 
-    # stdev_theorGC_1 = stdev_mean_theor_calc(weightGC_1_CT)
-    # stdev_obsGC_1 = (wmGC_1_CT+1)*np.sqrt(np.nanvar(df['LDXr8'], ddof=1)/np.nanmean(df['LDXr8'])**2 + np.nanvar(df['Xr8'], ddof=1)/np.nanmean(df['Xr8'])**2
-    #                  - (2*np.cov(df['LDXr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['Xr8'])))/np.sqrt(np.count_nonzero(~np.isnan(df['LDXr8'])) - 1)    
-      
-    # wm1_CG_CT, weight1_CG_CT = weighted_mean_calc(df['unc1-C/G'], df['1-C/G'], weight_mean_bool) 
-    # stdev_theor1_CG = stdev_mean_theor_calc(weight1_CG_CT)
-    # stdev_obs1_CG = (1-wm1_CG_CT)*np.sqrt(np.nanvar(df['LDXr8'], ddof=1)/np.nanmean(df['LDXr8'])**2 + np.nanvar(df['Xr8'], ddof=1)/np.nanmean(df['Xr8'])**2
-    #                  - (2*np.cov(df['LDXr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['Xr8'])))/np.sqrt(np.count_nonzero(~np.isnan(df['LDXr8'])) - 1)    
-  
-    # unc_params = np.array([wmGC_1_CT, stdev_theorGC_1, stdev_obsGC_1, wmBGC_CT, stdev_theorBGC, stdev_obsBGC, 
-    #                        wm1_CG_CT, stdev_theor1_CG, stdev_obs1_CG, wmB_CT_Freda, stdev_theorB_Freda, stdev_obsB_Freda, stdev_obsB_ODRonly])
-
     print('Linearised threshold data')
-    return df, unc_params 
+    return df
 
 #==============================================================================
 # STATSGET 
@@ -290,103 +259,70 @@ def linearise_threshold_data(df, dilution, mass):
 # 
 #==============================================================================
 
-def stats_get(df, weight_mean_bool):
+def stats_get(thresh_df, weight_mean_bool):
+    # this function produces the regression data 
+    # i.e. takes weighted means and calculates st devs for data from each threshold, 
+    # puts stats from all thresholds into a dataframe called reg_df
+
     # weight_mean_bool is a boolean 
     # i.e. if weight_mean_bool == 1, calculate weighted mean
 
-    # this function produces the regression data (i.e. takes weighted means 
-    # of threshold data)
+    # get the threshold voltages in the data file
+    unique_thresholds = thresh_df['Threshold voltage (mV)'].unique()
 
-    # BG/C Freda's equations
-    wmBGC_CT, weightBGC_CT = weighted_mean_calc(df['uncBG/C'], df['BG/C'], weight_mean_bool) 
-    stdev_theorBGC = stdev_mean_theor_calc(weightBGC_CT)
-    stdev_obsBGC = wmBGC_CT*np.sqrt(np.nanvar(df['LDr8'], ddof=1)/np.nanmean(df['LDr8'])**2 + np.nanvar(df['Xr8'], ddof=1)/np.nanmean(df['Xr8'])**2 + np.nanvar(df['LDXr8'], ddof=1)/np.nanmean(df['LDXr8'])**2 
-                                       + (2*np.cov(df['LDr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDr8'])*np.nanmean(df['Xr8'])) 
-                                          - (2*np.cov(df['LDXr8'],df['LDr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['LDr8']))  
-                                              - (2*np.cov(df['LDXr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['Xr8'])))/np.sqrt(np.count_nonzero(~np.isnan(df['LDr8'])) - 1)
+    # names of columns in the eventual regression dataframe
+    regcolumns=['G/C-1 WM', 'Stdev of Mean G/C-1 (Theor)', 'Stdev of Mean G/C-1 (Obs)',
+                'BG/C WM', 'Stdev of Mean BGC (Theor)', 'Stdev of Mean BGC (Obs)',
+                '1-C/G WM', 'Stdev of Mean 1-C/G (Theor)', 'Stdev of Mean 1-C/G (Obs)', 
+                'B WM', 'Stdev of Mean B (Theor)', 
+                'Stdev of Mean B (Obs)', 'Stdev of Mean B (Obs)(ODR only)']
 
-    # B Freda's equations
-    wmB_CT_Freda, weightB_CT_Freda = weighted_mean_calc(df['uncB'], df['B'], weight_mean_bool) 
-    stdev_theorB_Freda = stdev_mean_theor_calc(weightB_CT_Freda)
-    stdev_obsB_Freda = wmB_CT_Freda*np.sqrt(np.nanvar(df['LDr8'], ddof=1)/np.nanmean(df['LDr8'])**2 + np.nanvar(df['Xr8'], ddof=1)/np.nanmean(df['Xr8'])**2 + np.nanvar(df['LDXr8'], ddof=1)/np.nanmean(df['LDXr8'])**2 
-                                       + (2*np.cov(df['LDr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDr8'])*np.nanmean(df['Xr8'])) 
-                                          - (2*np.cov(df['LDXr8'],df['LDr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['LDr8']))  
-                                              - (2*np.cov(df['LDXr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['Xr8'])))/np.sqrt(np.count_nonzero(~np.isnan(df['LDr8'])) - 1)
-    stdev_obsB_ODRonly = wmB_CT_Freda*np.sqrt(np.nanvar(df['LDr8'], ddof=1)/np.nanmean(df['LDr8'])**2)/np.sqrt(np.count_nonzero(~np.isnan(df['LDr8'])) - 1)
+    # go through data one threshold at a time
+    for i in range(len(unique_thresholds)):
+        threshold_i = unique_thresholds[i]
+        # only look at data for that threshold
+        df = thresh_df.loc[thresh_df['Threshold voltage (mV)'] == threshold_i]
 
-    # G/C - 1 Freda's equations
-    wmGC_1_CT, weightGC_1_CT = weighted_mean_calc(df['uncG/C-1'], df['G/C-1'], weight_mean_bool) 
-    stdev_theorGC_1 = stdev_mean_theor_calc(weightGC_1_CT)
-    stdev_obsGC_1 = (wmGC_1_CT+1)*np.sqrt(np.nanvar(df['LDXr8'], ddof=1)/np.nanmean(df['LDXr8'])**2 + np.nanvar(df['Xr8'], ddof=1)/np.nanmean(df['Xr8'])**2
-                     - (2*np.cov(df['LDXr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['Xr8'])))/np.sqrt(np.count_nonzero(~np.isnan(df['LDXr8'])) - 1)  
+        # BG/C Freda's equations
+        wmBGC_CT, weightBGC_CT = weighted_mean_calc(df['uncBG/C'], df['BG/C'], weight_mean_bool) 
+        stdev_theorBGC = stdev_mean_theor_calc(weightBGC_CT)
+        stdev_obsBGC = wmBGC_CT*np.sqrt(np.nanvar(df['LDr8'], ddof=1)/np.nanmean(df['LDr8'])**2 + np.nanvar(df['Xr8'], ddof=1)/np.nanmean(df['Xr8'])**2 + np.nanvar(df['LDXr8'], ddof=1)/np.nanmean(df['LDXr8'])**2 
+                                        + (2*np.cov(df['LDr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDr8'])*np.nanmean(df['Xr8'])) 
+                                            - (2*np.cov(df['LDXr8'],df['LDr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['LDr8']))  
+                                                - (2*np.cov(df['LDXr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['Xr8'])))/np.sqrt(np.count_nonzero(~np.isnan(df['LDr8'])) - 1)
 
-    # 1 - C/G Freda's equations
-    wm1_CG_CT, weight1_CG_CT = weighted_mean_calc(df['unc1-C/G'], df['1-C/G'], weight_mean_bool) 
-    stdev_theor1_CG = stdev_mean_theor_calc(weight1_CG_CT)
-    stdev_obs1_CG = (1-wm1_CG_CT)*np.sqrt(np.nanvar(df['LDXr8'], ddof=1)/np.nanmean(df['LDXr8'])**2 + np.nanvar(df['Xr8'], ddof=1)/np.nanmean(df['Xr8'])**2
-                     - (2*np.cov(df['LDXr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['Xr8'])))/np.sqrt(np.count_nonzero(~np.isnan(df['LDXr8'])) - 1)    
-  
-    unc_params = np.array([wmGC_1_CT, stdev_theorGC_1, stdev_obsGC_1, wmBGC_CT, stdev_theorBGC, stdev_obsBGC, 
-                           wm1_CG_CT, stdev_theor1_CG, stdev_obs1_CG, wmB_CT_Freda, stdev_theorB_Freda, stdev_obsB_Freda, stdev_obsB_ODRonly])
+        # B Freda's equations
+        wmB_CT_Freda, weightB_CT_Freda = weighted_mean_calc(df['uncB'], df['B'], weight_mean_bool) 
+        stdev_theorB_Freda = stdev_mean_theor_calc(weightB_CT_Freda)
+        stdev_obsB_Freda = wmB_CT_Freda*np.sqrt(np.nanvar(df['LDr8'], ddof=1)/np.nanmean(df['LDr8'])**2 + np.nanvar(df['Xr8'], ddof=1)/np.nanmean(df['Xr8'])**2 + np.nanvar(df['LDXr8'], ddof=1)/np.nanmean(df['LDXr8'])**2 
+                                        + (2*np.cov(df['LDr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDr8'])*np.nanmean(df['Xr8'])) 
+                                            - (2*np.cov(df['LDXr8'],df['LDr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['LDr8']))  
+                                                - (2*np.cov(df['LDXr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['Xr8'])))/np.sqrt(np.count_nonzero(~np.isnan(df['LDr8'])) - 1)
+        stdev_obsB_ODRonly = wmB_CT_Freda*np.sqrt(np.nanvar(df['LDr8'], ddof=1)/np.nanmean(df['LDr8'])**2)/np.sqrt(np.count_nonzero(~np.isnan(df['LDr8'])) - 1)
 
-    return [(unc_params[0], unc_params[1], unc_params[2],
-             unc_params[3], unc_params[4], unc_params[5], '',
-             unc_params[6], unc_params[7], unc_params[8],
-             unc_params[9], unc_params[10], unc_params[11], unc_params[12])]
+        # G/C - 1 Freda's equations
+        wmGC_1_CT, weightGC_1_CT = weighted_mean_calc(df['uncG/C-1'], df['G/C-1'], weight_mean_bool) 
+        stdev_theorGC_1 = stdev_mean_theor_calc(weightGC_1_CT)
+        stdev_obsGC_1 = (wmGC_1_CT+1)*np.sqrt(np.nanvar(df['LDXr8'], ddof=1)/np.nanmean(df['LDXr8'])**2 + np.nanvar(df['Xr8'], ddof=1)/np.nanmean(df['Xr8'])**2
+                        - (2*np.cov(df['LDXr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['Xr8'])))/np.sqrt(np.count_nonzero(~np.isnan(df['LDXr8'])) - 1)  
+
+        # 1 - C/G Freda's equations
+        wm1_CG_CT, weight1_CG_CT = weighted_mean_calc(df['unc1-C/G'], df['1-C/G'], weight_mean_bool) 
+        stdev_theor1_CG = stdev_mean_theor_calc(weight1_CG_CT)
+        stdev_obs1_CG = (1-wm1_CG_CT)*np.sqrt(np.nanvar(df['LDXr8'], ddof=1)/np.nanmean(df['LDXr8'])**2 + np.nanvar(df['Xr8'], ddof=1)/np.nanmean(df['Xr8'])**2
+                        - (2*np.cov(df['LDXr8'],df['Xr8'],rowvar=False)[0,1])/(np.nanmean(df['LDXr8'])*np.nanmean(df['Xr8'])))/np.sqrt(np.count_nonzero(~np.isnan(df['LDXr8'])) - 1)    
+
+        threshold_data_stats = np.array([[wmGC_1_CT, stdev_theorGC_1, stdev_obsGC_1, wmBGC_CT, stdev_theorBGC, stdev_obsBGC, 
+                                         wm1_CG_CT, stdev_theor1_CG, stdev_obs1_CG, wmB_CT_Freda, stdev_theorB_Freda, stdev_obsB_Freda, stdev_obsB_ODRonly]])
+        reg_df_i = pd.DataFrame(data=threshold_data_stats,index=[i],columns=regcolumns)
+
+        if i == 0:
+            # initialise regression dataframe with calculated statistics from first threshold data
+            reg_df = reg_df_i
+        else:
+            # append calculated statistics from next threshold data to regression dataframe
+            reg_df = pd.concat([reg_df, reg_df_i])
+
+    print('Finished calculating data for regressions. Calculated weighted means and st devs for each threshold')
+    return reg_df
              
-
-# ##==============================================================================
-# ## Building Data Frames
-# ##==============================================================================
-# threshcolumns= [
-# ' A', ' B', ' C',' AB', ' AC', ' BC', ' ABC', ' X', ' ABX', ' ACX', ' BCX', 
-# ' ABCX', ' Real', ' Live', ' LD', ' LDX', ' Started', 
-# ' Finished', 'Source mass mg', 'Source dilution factor', 'Reference datetime', 
-# 'timedif(s)','Decay Factor', 'backLDr8','LDr8','backXr8', 'Xr8','backLDXr8', 'LDXr8', 
-# 'uncBG/C', 'uncB', 'uncG/C-1', 'unc1-C/G']
-
-# #threshdf=pd.DataFrame(data=[], columns=(threshcolumns))
-
-
-# regcolumns=['G/C-1 WM', 'Stdev of Mean G/C-1 (Theor)', 'Stdev of Mean G/C-1 (Obs)',
-# 'BG/C WM', 'Stdev of Mean BGC (Theor)', 'Stdev of Mean BGC (Obs)', '',
-# '1-C/G WM', 'Stdev of Mean 1-C/G (Theor)', 'Stdev of Mean 1-C/G (Obs)', 
-# 'B WM', 'Stdev of Mean B (Theor)', 'Stdev of Mean B (Obs)', 'Stdev of Mean B (Obs)(ODR only)']
-
-# #regdf=pd.DataFrame(data=[],columns=(regcolumns))
-
-# #==============================================================================
-# # ANALYSIS
-# #==============================================================================
-
-# dirname=rtdt1dir
-# i=0
-# for i in range(len(threshfiles1)):
-#     if threshfiles1[i]:
-#         thresh1df, unc_params = dataget(dirname,threshfiles1[i],backgroundexcel,i)
-#         stats1=statsget(unc_params)
-#         reg1df=pd.DataFrame(data=stats1,index=[i],columns=regcolumns)
-#         if i == 0:
-#             # initialise previously empty dataframes
-#             threshdf=thresh1df
-#             regdf=reg1df
-#         else:
-#             # add to dataframes
-#             threshdf=pd.concat([threshdf,thresh1df])
-#             regdf=pd.concat([regdf,reg1df])
-
-
-# regdf=regdf[regcolumns]
-# regdf=regdf.sort_values('G/C-1 WM')
-# regdf.to_excel("{0}_rt{1}dt{2}_RegData_{3}{4}{5}_newunceqns.xlsx".format(outputfilename,rt,dt,DorT,Sb,WM))
-# regdf.drop(regdf.index, inplace=True)
-# threshdf=threshdf[threshcolumns]
-# threshdf.to_excel("{0}_rt{1}dt{2}_ThreshData_{3}{4}{5}_newunceqns.xlsx".format(outputfilename,rt,dt,DorT,Sb,WM))
-# threshdf.drop(threshdf.index, inplace=True)
-
-
-# print()
-# print('Finished with different thresholds in {0}'.format(dirname))
-
-    
-   ############ END ############

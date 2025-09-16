@@ -11,8 +11,9 @@ import datetime
 from scipy.optimize import curve_fit
 import scipy.odr.odrpack as odear
 import sys
-import pandas4LSC_threshold_data_processing as LSC_data_processing
-#import pandas4LSC_regression_new as LSC_regression
+import pandas4LSC_data_processing as LSC_data_processing
+import pandas4LSC_data_analysis as LSC_data_analysis
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """ YOUR INPUT IS REQUIRED BELOW """
@@ -47,8 +48,7 @@ specified_background = 1 # 0=NO 1=YES
 # Accidental coincidences correction?
 accidental_coinc = 1 # 0=NO 1=YES
 # weighting of points? Select one at a time
-theoretical_sd = 1 # 0=NO 1=YES
-observed_sd = 0 # 0=NO 1=YES
+standard_deviation = 'OSD' # observed standard deviation or 'TSD' for theoretical standard deviation
 # Use weighted mean?
 weight_mean = 1 # 0=NO 1=YES
 # DIRECTORY, where are the data files located?
@@ -103,13 +103,10 @@ back1Q=0
 #==============================================================================
 #~~~~~~~~~~~~~~~~ NO MORE USER INPUT REQUIRED UNLESS PROMPTED ~~~~~~~~~~~~~~~~~
 
-
-
 ############### ANALYSING BACKGROUND DATA
 # Load background data
 back_file_path = data_dir + '/' + backgroundexcel
 back_df = pd.read_excel(back_file_path, skiprows=0, na_values=0, index_col=0)
-
 
 
 ############### ANALYSING THRESHOLD DATA
@@ -128,10 +125,7 @@ thresh_df = LSC_data_processing.doubles_rates_corrected(thresh_df,back_df,
                                                         accidental_coincidence_corr = accidental_coinc)
 
 # linearise threshold data
-thresh_df, unc_params = LSC_data_processing.linearise_threshold_data(thresh_df, 
-                                                                     dilution, 
-                                                                     mass,
-                                                                     weight_mean)
+thresh_df = LSC_data_processing.linearise_threshold_data(thresh_df, dilution, mass)
 
 # Set up filename suffix
 if doubles_data==1:
@@ -149,24 +143,25 @@ if doubles_data==1:
     else:
         ACcorr = ''
 # save threshold dataframe to excel spreadsheet
-threshdf.to_excel("{0}_rt{1}dt{2}_ThreshData_{3}{4}{5}{6}_siobhan2025.xlsx".format(outputfilename,rt,dt,DorT,Sb,WM,ACcorr))
-#threshdf.drop(threshdf.index, inplace=True)
+threshold_data_filename = "{0}_rt{1}dt{2}_ThreshData_{3}{4}{5}{6}_siobhan2025.xlsx".format(outputfilename,rt,dt,DorT,Sb,WM,ACcorr)
+threshdf.to_excel(threshold_data_filename)
+print('written threshold data to {0}'.format(threshold_data_filename))
+
+# calculate stats from each threshold to produce regression dataframe
+regression_df = LSC_data_processing.stats_get(thresh_df, weight_mean)
+reg_filename="{0}_rt{1}dt{2}_RegData_{3}{4}{5}{6}_newunceqns.xlsx".format(outputfilename,rt,dt,DorT,Sb,WM,ACcorr)
+regression_df.to_excel(reg_filename)
+print('written regression data to {0}'.format(reg_filename))
         
-# # Data for regression
-# filename="{0}_rt{1}dt{2}_RegData_{3}{4}{5}_newunceqns.xlsx".format(outputfilename,rt,dt,DorT,Sb,WM)
-# regdf=pd.read_excel(filename,header=0,index_col=0)
+# # Or, directly load in the data to use for the for regression
+# regdf=pd.read_excel(my_regression_data_filename,header=0,index_col=0)
 
 # # Which regression code to run???
-
-# if theoretical_sd==1:
-#     StandDev='TSD'
-#     print("Calling pandas4LSC_regression")
-#     import pandas4LSC_regression  
-    
-# if observed_sd==1:
-#     StandDev='OSD'
-#     print("Calling pandas4LSC_regression")
-#     import pandas4LSC_regression    
+# do regression on regression dataframe
+LSC_data_analysis.regression(regression_df, outputfilename, branchratio, 
+                             refdatetime, halflifeseconds, dilution, mass, rt, 
+                             dt, gs, Sb, DorT, ACcorr, WM,
+                             StandDev = standard_deviation)
 
  
 
