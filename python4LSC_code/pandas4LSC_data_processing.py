@@ -109,7 +109,7 @@ def accidental_coincidences(df, rt):
                     +df['p3AC']*df['p3BC']) 
                  +(df['p3S'] +df['p3D'] -df['p3AB'])*(df['p3AB'] +df['p3T']))*rt*10**(-9)
 
-    df['aBC'] = (2*(df['p3B']*df['p3C'] +df['p3B']*df['p3AC'] +df['p3C']*df['p3AC']
+    df['aBC'] = (2*(df['p3B']*df['p3C'] +df['p3B']*df['p3AC'] +df['p3C']*df['p3AB']
                     +df['p3AB']*df['p3AC']) 
                  +(df['p3S'] +df['p3D'] -df['p3BC'])*(df['p3BC'] +df['p3T']))*rt*10**(-9)
 
