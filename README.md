@@ -5,7 +5,7 @@ This contains code used to analyse data from liquid scintillation coincidence co
     - plus `pandas4LSC_data_analysis` to do the regression on the data. 
 
 ## Analysis of threshold data and regression
-Brief outline of the `pandas4LSC_user` script.
+**Brief outline of the `pandas4LSC_user` script (you should edit this script).**
 
 ### User input
 - user needs to input constants such as reference date time, half life, dilution factor, mass, branch ratio, source name, resolving time, dead time and gamma shift    
@@ -32,13 +32,13 @@ Brief outline of the `pandas4LSC_user` script.
 - `LSC_data_processing.stats_get` calculates the weighted means, std devs for the linearised quantities and puts these in a new dataframe `reg_df`
     - `reg_df` is the dataframe that contains the data that is used for regression
 
-**The module `pandas4LSC_data_analysis is imported as `LSC_data_analysis`:**
+**The module `pandas4LSC_data_analysis` is imported as `LSC_data_analysis`:**
 - `LSC_data_analysis.regression` performs regression on `reg_df` and saves the results to the `_AllFits.xlsx` file
     - by default, this script runs every kind of regression (cubic/linear, least squares/orthogonal distance) on _BG/C_ vs _G/C-1_, and _B_ vs _1-C/G_ data
 
 ## Plotting
 Scripts to plot the results are still completely separate.    
-- `PlotStuff4LSC_user` script, which calls the `plotter` function in    
+- **The `PlotStuff4LSC_user` script (you should edit this)**, which calls the `plotter` function in    
     -  `PlotStuff4LSC` to plot the linearised threshold data, along with the cubic or linear fit, and a separate residuals plot
     - only one fit is shown on the plot at a time
 
