@@ -40,22 +40,27 @@ rt=250
 dt=50
 # Gamma shift
 gs=-5050
+#==============================================================================
+""" OPTIONS """
+#==============================================================================
 # Doubles or triples? Select one at a time
 doubles_data = 1 # 0=NO 1=YES
 triples_data = 0 # 0=NO 1=YES
 # Manually specified background?
-specified_background = 1 # 0=NO 1=YES
+specified_background = 0 # 0=NO 1=YES
 # Accidental coincidences correction?
 accidental_coinc = 1 # 0=NO 1=YES
 # weighting of points? Select one at a time
 standard_deviation = 'OSD' # observed standard deviation or 'TSD' for theoretical standard deviation
 # Use weighted mean?
 weight_mean = 1 # 0=NO 1=YES
-# DIRECTORY, where are the data files located?
-data_dir="csvs_LS2_win2"
 
 #==============================================================================
+""" DATA """
+#==============================================================================
 # LIST OF DATA FILES
+# DIRECTORY, where are the data files located?
+data_dir="csvs_LS2_win2"
 # format is [filename, threshold_voltage_in_mV]
 data_filename_list = [["LS2_win2_20mV.xlsx", 20],
                       ["LS2_win2_50mV.xlsx", 50],
@@ -74,40 +79,61 @@ data_filename_list = [["LS2_win2_20mV.xlsx", 20],
 """ If you are specifying backgrounds with a single excel spreadsheet """
 # i.e. specfied_background = 1 
 """ enter the name of the spreadsheet here... """
+# DIRECTORY, where is the specified background file located?
+specified_background_dir="csvs_LS2_win2"
 # BACKGROUND EXCEL FILE
-backgroundexcel="backgroundall_Doubles.xlsx"
+specified_background_excel="backgroundall_Doubles.xlsx"
 #==============================================================================
 """ Or if you are just analysing csv files to get the backgrounds for
 each threshold, put those files here... """
 # i.e. specfied_background = 0
-# BACKGROUND CSV FILES
-# back1A must be the background for thresh1A etc
-back1A="BKG-2_20mV_com.xlsx"
-back1B="BKG-2_50mV_com.xlsx"
-back1C="BKG-2_100mV_com.xlsx"
-back1D="BKG-2_200mV_com.xlsx"
-back1E="BKG-2_300mV_com.xlsx"
-back1F="BKG-2_400mV_com.xlsx"
-back1G="BKG-2_500mV_com.xlsx"
-back1H="BKG-2_600mV.xlsx"
-back1I="BKG-2_700mV.xlsx"
-back1J="BKG-2_800mV.xlsx"
-back1K="BKG-2_900mV.xlsx"
-back1L=0
-back1M=0
-back1N=0
-back1O=0
-back1P=0
-back1Q=0
+# BACKGROUND XLSX FILES
+# DIRECTORY, where are the data files located?
+background_dir="csvs_BKG_win2"
+# format is [filename, threshold_voltage_in_mV]
+background_filename_list = [["BKG-2_20mV_com.xlsx", 20],
+                            ["BKG-2_50mV_com.xlsx", 50],
+                            ["BKG-2_100mV_com.xlsx", 100],
+                            ["BKG-2_200mV_com.xlsx", 200],
+                            ["BKG-2_300mV_com.xlsx", 300],
+                            ["BKG-2_400mV_com.xlsx", 400],
+                            ["BKG-2_500mV_com.xlsx", 500],
+                            ["BKG-2_600mV.xlsx", 600],
+                            ["BKG-2_700mV.xlsx", 700],
+                            ["BKG-2_800mV.xlsx", 800],
+                            ["BKG-2_900mV.xlsx", 900]
+                            ]
 
 #==============================================================================
 #~~~~~~~~~~~~~~~~ NO MORE USER INPUT REQUIRED UNLESS PROMPTED ~~~~~~~~~~~~~~~~~
-
+if accidental_coinc == 1:
+    ACcorr = '_ACcorr'
+else:
+    ACcorr = ''
 ############### ANALYSING BACKGROUND DATA
 # Load background data
-back_file_path = data_dir + '/' + backgroundexcel
-back_df = pd.read_excel(back_file_path, skiprows=0, na_values=0, index_col=0)
+if specified_background == 1:
+    back_file_path = specified_background_dir + '/' + specified_background_excel
+    back_df = pd.read_excel(back_file_path, skiprows=0, na_values=0, index_col=0)
+# or load raw background data and process
+elif specified_background == 0:
+    raw_background_df = LSC_data_processing.get_data(background_dir, background_filename_list, 
+                                                     file_type = 'excel')
+    if accidental_coinc == 1:
+        raw_background_df = LSC_data_processing.accidental_coincidences(raw_background_df, rt)
+    
+    raw_background_df = LSC_data_processing.background_doubles_rates_corrected(raw_background_df, 
+                                                                               accidental_coincidence_corr = accidental_coinc)
+    all_background_data_filename = "Background_Thresh_Data_rt{0}dt{1}_{2}{3}.xlsx".format(rt,dt,'doubles',ACcorr)
+    raw_background_df.to_excel(all_background_data_filename)
 
+    back_df = LSC_data_processing.background_average(raw_background_df)
+    averaged_background_data_filename = "Background_Averaged_rt{0}dt{1}_{2}{3}.xlsx".format(rt,dt,'doubles',ACcorr)
+    back_df.to_excel(averaged_background_data_filename)
+   
+    print('\n Processed background data and saved averaged background to {0}'.format(averaged_background_data_filename))
+    print(back_df)
+    print()
 
 ############### ANALYSING THRESHOLD DATA
 # Load threshold data
@@ -138,10 +164,7 @@ if doubles_data==1:
         Sb='_SB'
     else:
         Sb=''
-    if accidental_coinc == 1:
-        ACcorr = '_ACcorr'
-    else:
-        ACcorr = ''
+
 # save threshold dataframe to excel spreadsheet
 threshold_data_filename = "{0}_rt{1}dt{2}_ThreshData_{3}{4}{5}{6}_siobhan2025.xlsx".format(outputfilename,rt,dt,DorT,Sb,WM,ACcorr)
 threshdf.to_excel(threshold_data_filename)

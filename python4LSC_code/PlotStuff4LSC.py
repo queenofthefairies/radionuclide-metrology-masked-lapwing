@@ -38,6 +38,11 @@ def plotter(reg_data_filename, fits_data_filename, what_to_plot,
     source_name = source_name_df['Regression data'][9]
     std_dev_df = summary_df.loc[(summary_df['Function'] == 'Standard deviation used as weights')]
     stand_dev = std_dev_df['Regression data'][18]
+    backg_df = summary_df.loc[(summary_df['Function'] == 'Background')]
+    backg = backg_df['Regression data'][19]
+    if backg != '_SB':
+        backg = ''
+
 
     # read in regression data
     reg_df = pd.read_excel(reg_data_filename, index_col=0)
@@ -106,16 +111,16 @@ def plotter(reg_data_filename, fits_data_filename, what_to_plot,
         y_label = r"$N_\beta $ (s$^{-1}$ mg $^{-1}$)"
         leg_pos = 3 # legend position
         txt_pos = 1 # corner text position
-        plot_fig_filename = '{0}_B_vs_ineff_{1}_{2}_PLOT_{2}.png'.format(source_name, type_of_fit, type_of_reg, stand_dev)
-        resid_plot_fig_filename = '{0}_B_vs_ineff_{1}_{2}_RESIDUALS_PLOT_{3}.png'.format(source_name,type_of_fit,type_of_reg,stand_dev)
+        plot_fig_filename = '{0}_B_vs_ineff_{1}_{2}_PLOT_{2}{3}.png'.format(source_name, type_of_fit, type_of_reg, stand_dev,backg)
+        resid_plot_fig_filename = '{0}_B_vs_ineff_{1}_{2}_RESIDUALS_PLOT_{3}{4}.png'.format(source_name,type_of_fit,type_of_reg,stand_dev,backg)
 
     elif what_to_plot == 'BGC':
         x_label = r"$N_\gamma / N_C - 1$"
         y_label = r"$N_\beta N_\gamma / N_C $ (s$^{-1}$ mg $^{-1}$)"
         leg_pos = 4 # legend position
         txt_pos = 2 # corner text position
-        plot_fig_filename = '{0}_BGC_vs_GoC-1_{1}_{2}_PLOT_{3}.png'.format(source_name,type_of_fit,type_of_reg,stand_dev)
-        resid_plot_fig_filename = '{0}_BGC_vs_GoC-1_{1}_{2}_RESIDUALS_PLOT_{3}.png'.format(source_name,type_of_fit,type_of_reg,stand_dev)
+        plot_fig_filename = '{0}_BGC_vs_GoC-1_{1}_{2}_PLOT_{3}{4}.png'.format(source_name,type_of_fit,type_of_reg,stand_dev,backg)
+        resid_plot_fig_filename = '{0}_BGC_vs_GoC-1_{1}_{2}_RESIDUALS_PLOT_{3}{4}.png'.format(source_name,type_of_fit,type_of_reg,stand_dev,backg)
     
     cornertext="Activity from {0} intercept: \n".format(type_of_fit) +r"{0:.4f} $\pm$ {1:.4f} MBq/g ({2:.4f}%)".format(activity_conc,
                                                                                                                        activity_conc_abs_unc,

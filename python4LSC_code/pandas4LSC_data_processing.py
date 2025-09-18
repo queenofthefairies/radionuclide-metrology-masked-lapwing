@@ -166,8 +166,69 @@ def accidental_coincidences(df, rt):
                         +df['p4BCX']*(df['p4S']-df['p4A']+df['p4BC']+df['p4BX']+df['p4CX']))*rt*10**(-9)
     
     df['aLDX'] = df['aLDX Type1'] + df['aLDX Type2']
-    print('Done accidental coincidences correction for threshold data')
+    print('Done accidental coincidences correction for data')
     return df
+
+#==============================================================================
+# Calculate corrected rates for logical doubles BACKGROUND (LD, LDX, X)
+#==============================================================================
+def background_doubles_rates_corrected(raw_back_df, accidental_coincidence_corr = 0):
+
+    if accidental_coincidence_corr == 1:
+        # LD Rate, accidental coinc corrected
+        raw_back_df['LDr8']=raw_back_df[' LD']/raw_back_df[' Live'] -raw_back_df['aD']
+        # X Rate 
+        raw_back_df['Xr8']= raw_back_df[' X']/raw_back_df[' Live']
+        # LDX Rate, accidental coinccorrected
+        raw_back_df['LDXr8']=raw_back_df[' LDX']/raw_back_df[' Live'] -raw_back_df['aLDX']
+        print('calculate rates with accidental coincidence correction for background data')
+
+    else: # don't correct for accidental coincidences
+        # LD Rate
+        raw_back_df['LDr8']=raw_back_df[' LD']/raw_back_df[' Live']
+        # X Rate
+        raw_back_df['Xr8']=raw_back_df[' X']/raw_back_df[' Live']
+        # LDX Rate
+        raw_back_df['LDXr8']=raw_back_df[' LDX']/raw_back_df[' Live']
+        print('calculated rates for background data')
+
+    return raw_back_df
+
+#==============================================================================
+# Calculate `average` background for each threshold
+#==============================================================================
+def background_average(raw_back_df):
+    back_df_columns = ['threshold', 'backLDr8', 'unc backLDr8', 'backXr8', 'unc backXr8', 'backLDXr8', 'unc backLDXr8']
+
+    # get the threshold voltages in the data file
+    unique_thresholds = raw_back_df['Threshold voltage (mV)'].unique()
+    # go through background data one threshold at a time
+    for i in range(len(unique_thresholds)):
+        threshold_i = unique_thresholds[i]
+        # only look at backgrounds for that threshold
+        raw_back_df_i = raw_back_df.loc[raw_back_df['Threshold voltage (mV)'] == threshold_i]
+        # calculate mean and standard deviations for different count rates from that threshold data
+        LDr8_mean_i = raw_back_df_i['LDr8'].mean()
+        LDr8_std_i = raw_back_df_i['LDr8'].std()
+        Xr8_mean_i = raw_back_df_i['Xr8'].mean()
+        Xr8_std_i = raw_back_df_i['Xr8'].std()
+        LDXr8_mean_i = raw_back_df_i['LDXr8'].mean()
+        LDXr8_std_i = raw_back_df_i['LDXr8'].std()
+        
+        # collect all these stats together and create a dataframe just for background data from this threshold
+        background_data_stats = np.array([[threshold_i, LDr8_mean_i, LDr8_std_i, Xr8_mean_i, Xr8_std_i, LDXr8_mean_i, LDXr8_std_i]])
+        back_df_i = pd.DataFrame(data=background_data_stats,index=[i],columns=back_df_columns)
+
+        if i == 0:
+            # initialise background dataframe with calculated statistics from first threshold data
+            back_df = back_df_i
+        else:
+            # append calculated statistics from next threshold data to background dataframe
+            back_df = pd.concat([back_df, back_df_i])
+
+    # return the dataframe with averaged background data
+    return back_df
+
 
 #==============================================================================
 # Calculate corrected rates for logical doubles (LD, LDX, X)
@@ -181,9 +242,13 @@ def doubles_rates_corrected(df,back_df, accidental_coincidence_corr = 0):
     # go through background data one threshold at a time
     for threshold_i in unique_thresholds:
         # only look at backgrounds for that threshold
-        back_df_i = back_df.loc[back_df['threshold'] == threshold_i]
         try:
-            # add dictionary entry for that threshold background
+            back_df_i = back_df.loc[back_df['threshold'] == threshold_i]
+        except KeyError: # some background files have the column called 'Threshold voltage (mV)' instead
+            back_df_i = back_df.loc[back_df['Threshold voltage (mV)'] == threshold_i]
+
+        # add dictionary entry for that threshold background
+        try:
             background_dict[str(threshold_i)] = [back_df_i['backLDr8'].iloc[0], 
                                                 back_df_i['unc backLDr8'].iloc[0], 
                                                 back_df_i['backXr8'].iloc[0], 
