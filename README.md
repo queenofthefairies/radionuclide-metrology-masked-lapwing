@@ -5,7 +5,7 @@ This contains code used to analyse data from liquid scintillation coincidence co
     - plus `pandas4LSC_data_analysis` to do the regression on the data. 
 
 Scripts to plot the results are still completely separate.    
-- - `PlotStuff4LSC_user` script, which calls functions in    
+- `PlotStuff4LSC_user` script, which calls functions in    
     -  `PlotStuff4LSC` to plot the linearised threshold data, along with the cubic or linear fit, and a separate residuals plot
 
 
